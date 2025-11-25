@@ -1,75 +1,187 @@
 <?php
+
+namespace Mpdf\Gif;
+
 /**
- * @package php-svg-lib
- * @link    http://github.com/dompdf/php-svg-lib
- * @license GNU LGPLv3+ http://www.gnu.org/copyleft/lesser.html
+ * GIF Util - (C) 2003 Yamasoft (S/C)
+ *
+ * All Rights Reserved
+ *
+ * This file can be freely copied, distributed, modified, updated by anyone under the only
+ * condition to leave the original address (Yamasoft, http://www.yamasoft.com) and this header.
+ *
+ * @link http://www.yamasoft.com
  */
-
-namespace Svg\Tag;
-
-use Svg\Style;
-
-class Image extends AbstractTag
+class Image
 {
-    protected $x = 0;
-    protected $y = 0;
-    protected $width = 0;
-    protected $height = 0;
-    protected $href = null;
 
-    protected function before($attributes)
-    {
-        parent::before($attributes);
+	var $m_disp;
 
-        $surface = $this->document->getSurface();
-        $surface->save();
+	var $m_bUser;
 
-        $this->applyTransform($attributes);
-    }
+	var $m_bTrans;
 
-    public function start($attributes)
-    {
-        $height = $this->document->getHeight();
-        $width = $this->document->getWidth();
-        $this->y = $height;
+	var $m_nDelay;
 
-        if (isset($attributes['x'])) {
-            $this->x = $this->convertSize($attributes['x'], $width);
-        }
-        if (isset($attributes['y'])) {
-            $this->y = $height - $this->convertSize($attributes['y'], $height);
-        }
+	var $m_nTrans;
 
-        if (isset($attributes['width'])) {
-            $this->width = $this->convertSize($attributes['width'], $width);
-        }
-        if (isset($attributes['height'])) {
-            $this->height = $this->convertSize($attributes['height'], $height);
-        }
+	var $m_lpComm;
 
-        if (isset($attributes['xlink:href'])) {
-            $this->href = $attributes['xlink:href'];
-        }
+	var $m_gih;
 
-        if (isset($attributes['href'])) {
-            $this->href = $attributes['href'];
-        }
+	var $m_data;
 
-        $this->document->getSurface()->transform(1, 0, 0, -1, 0, $height);
+	var $m_lzw;
 
-        $scheme = \strtolower(parse_url($this->href, PHP_URL_SCHEME) ?: "");
-        if (
-            $scheme === "phar" || \strtolower(\substr($this->href, 0, 7)) === "phar://"
-            || ($this->document->allowExternalReferences === false && $scheme !== "data")
-        ) {
-            return;
-        }
+	public function __construct()
+	{
+		unset($this->m_disp);
+		unset($this->m_bUser);
+		unset($this->m_bTrans);
+		unset($this->m_nDelay);
+		unset($this->m_nTrans);
+		unset($this->m_lpComm);
+		unset($this->m_data);
+		$this->m_gih = new ImageHeader();
+		$this->m_lzw = new Lzw();
+	}
 
-        $this->document->getSurface()->drawImage($this->href, $this->x, $this->y, $this->width, $this->height);
-    }
+	function load($data, &$datLen)
+	{
+		$datLen = 0;
 
-    protected function after()
-    {
-        $this->document->getSurface()->restore();
-    }
-} 
+		while (true) {
+			$b = ord($data[0]);
+			$data = substr($data, 1);
+			$datLen++;
+
+			switch ($b) {
+				case 0x21: // Extension
+					$len = 0;
+					if (!$this->skipExt($data, $len)) {
+						return false;
+					}
+					$datLen += $len;
+					break;
+
+				case 0x2C: // Image
+					// LOAD HEADER & COLOR TABLE
+					$len = 0;
+					if (!$this->m_gih->load($data, $len)) {
+						return false;
+					}
+					$data = substr($data, $len);
+					$datLen += $len;
+
+					// ALLOC BUFFER
+					$len = 0;
+
+					if (!($this->m_data = $this->m_lzw->deCompress($data, $len))) {
+						return false;
+					}
+
+					$data = substr($data, $len);
+					$datLen += $len;
+
+					if ($this->m_gih->m_bInterlace) {
+						$this->deInterlace();
+					}
+
+					return true;
+
+				case 0x3B: // EOF
+				default:
+					return false;
+			}
+		}
+		return false;
+	}
+
+	function skipExt(&$data, &$extLen)
+	{
+		$extLen = 0;
+
+		$b = ord($data[0]);
+		$data = substr($data, 1);
+		$extLen++;
+
+		switch ($b) {
+			case 0xF9: // Graphic Control
+				$b = ord($data[1]);
+				$this->m_disp = ($b & 0x1C) >> 2;
+				$this->m_bUser = ($b & 0x02) ? true : false;
+				$this->m_bTrans = ($b & 0x01) ? true : false;
+				$this->m_nDelay = $this->w2i(substr($data, 2, 2));
+				$this->m_nTrans = ord($data[4]);
+				break;
+
+			case 0xFE: // Comment
+				$this->m_lpComm = substr($data, 1, ord($data[0]));
+				break;
+
+			case 0x01: // Plain text
+				break;
+
+			case 0xFF: // Application
+				break;
+		}
+
+		// SKIP DEFAULT AS DEFS MAY CHANGE
+		$b = ord($data[0]);
+		$data = substr($data, 1);
+		$extLen++;
+		while ($b > 0) {
+			$data = substr($data, $b);
+			$extLen += $b;
+			$b = ord($data[0]);
+			$data = substr($data, 1);
+			$extLen++;
+		}
+		return true;
+	}
+
+	function w2i($str)
+	{
+		return ord(substr($str, 0, 1)) + (ord(substr($str, 1, 1)) << 8);
+	}
+
+	function deInterlace()
+	{
+		$data = $this->m_data;
+
+		for ($i = 0; $i < 4; $i++) {
+			switch ($i) {
+				case 0:
+					$s = 8;
+					$y = 0;
+					break;
+
+				case 1:
+					$s = 8;
+					$y = 4;
+					break;
+
+				case 2:
+					$s = 4;
+					$y = 2;
+					break;
+
+				case 3:
+					$s = 2;
+					$y = 1;
+					break;
+			}
+
+			for (; $y < $this->m_gih->m_nHeight; $y += $s) {
+				$lne = substr($this->m_data, 0, $this->m_gih->m_nWidth);
+				$this->m_data = substr($this->m_data, $this->m_gih->m_nWidth);
+
+				$data = substr($data, 0, $y * $this->m_gih->m_nWidth) .
+					$lne .
+					substr($data, ($y + 1) * $this->m_gih->m_nWidth);
+			}
+		}
+
+		$this->m_data = $data;
+	}
+}
