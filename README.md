@@ -1,189 +1,239 @@
-composer/pcre
-=============
+Dompdf
+======
 
-PCRE wrapping library that offers type-safe `preg_*` replacements.
+[![Build Status](https://github.com/dompdf/dompdf/actions/workflows/test.yml/badge.svg)](https://github.com/dompdf/dompdf/actions/workflows/test.yml)
+[![PHP Versions Supported](https://poser.pugx.org/dompdf/dompdf/require/php)](https://packagist.org/packages/dompdf/dompdf)
+[![Latest Release](https://poser.pugx.org/dompdf/dompdf/v)](https://packagist.org/packages/dompdf/dompdf)
+[![Total Downloads](https://poser.pugx.org/dompdf/dompdf/downloads)](https://packagist.org/packages/dompdf/dompdf)
+[![License](https://poser.pugx.org/dompdf/dompdf/license)](https://packagist.org/packages/dompdf/dompdf)
+ 
+**Dompdf is an HTML to PDF converter**
 
-This library gives you a way to ensure `preg_*` functions do not fail silently, returning
-unexpected `null`s that may not be handled.
+At its heart, dompdf is (mostly) a [CSS 2.1](http://www.w3.org/TR/CSS2/) compliant
+HTML layout and rendering engine written in PHP. It is a style-driven renderer:
+it will download and read external stylesheets, inline style tags, and the style
+attributes of individual HTML elements. It also supports most presentational
+HTML attributes.
 
-As of 3.0 this library enforces [`PREG_UNMATCHED_AS_NULL`](#preg_unmatched_as_null) usage
-for all matching and replaceCallback functions, [read more below](#preg_unmatched_as_null)
-to understand the implications.
+*This document applies to the latest stable code which may not reflect the current 
+release. For released code please
+[navigate to the appropriate tag](https://github.com/dompdf/dompdf/tags).*
 
-It thus makes it easier to work with static analysis tools like PHPStan or Psalm as it
-simplifies and reduces the possible return values from all the `preg_*` functions which
-are quite packed with edge cases. As of v2.2.0 / v3.2.0 the library also comes with a
-[PHPStan extension](#phpstan-extension) for parsing regular expressions and giving you even better output types.
+----
 
-This library is a thin wrapper around `preg_*` functions with [some limitations](#restrictions--limitations).
-If you are looking for a richer API to handle regular expressions have a look at
-[rawr/t-regx](https://packagist.org/packages/rawr/t-regx) instead.
+**Check out the [demo](http://eclecticgeek.com/dompdf/debug.php) and ask any
+question on [StackOverflow](https://stackoverflow.com/questions/tagged/dompdf) or
+in [Discussions](https://github.com/dompdf/dompdf/discussions).**
 
-[![Continuous Integration](https://github.com/composer/pcre/workflows/Continuous%20Integration/badge.svg?branch=main)](https://github.com/composer/pcre/actions)
+Follow us on [![Twitter](http://twitter-badges.s3.amazonaws.com/twitter-a.png)](http://www.twitter.com/dompdf).
+
+---
 
 
-Installation
-------------
 
-Install the latest version with:
+## Features
+
+ * Handles most CSS 2.1 and a few CSS3 properties, including @import, @media &
+   @page rules
+ * Supports most presentational HTML 4.0 attributes
+ * Supports external stylesheets, either local or through http/ftp (via
+   fopen-wrappers)
+ * Supports complex tables, including row & column spans, separate & collapsed
+   border models, individual cell styling
+ * Image support (gif, png (8, 24 and 32 bit with alpha channel), bmp & jpeg)
+ * No dependencies on external PDF libraries, thanks to the R&OS PDF class
+ * Inline PHP support
+ * Basic SVG support (see "Limitations" below)
+ 
+## Requirements
+
+ * PHP version 7.1 or higher
+ * DOM extension
+ * MBString extension
+ * php-font-lib
+ * php-svg-lib
+ 
+Note that some required dependencies may have further dependencies 
+(notably php-svg-lib requires sabberworm/php-css-parser).
+
+### Recommendations
+
+ * GD (for image processing)
+   * Additionally, the IMagick or GMagick extension improves image processing performance for certain image types
+ * OPcache (OPcache, XCache, APC, etc.): improves performance
+
+Visit the wiki for more information:
+https://github.com/dompdf/dompdf/wiki/Requirements
+
+## About Fonts & Character Encoding
+
+PDF documents internally support the following fonts: Helvetica, Times-Roman,
+Courier, Zapf-Dingbats, & Symbol. These fonts only support Windows ANSI
+encoding. In order for a PDF to display characters that are not available in
+Windows ANSI, you must supply an external font. Dompdf will embed any referenced
+font in the PDF so long as it has been pre-loaded or is accessible to dompdf and
+reference in CSS @font-face rules. See the
+[font overview](https://github.com/dompdf/dompdf/wiki/About-Fonts-and-Character-Encoding)
+for more information on how to use fonts.
+
+The [DejaVu TrueType fonts](https://dejavu-fonts.github.io/) have been pre-installed
+to give dompdf decent Unicode character coverage by default. To use the DejaVu
+fonts reference the font in your stylesheet, e.g. `body { font-family: DejaVu
+Sans; }` (for DejaVu Sans). The following DejaVu 2.34 fonts are available:
+DejaVu Sans, DejaVu Serif, and DejaVu Sans Mono.
+
+## Easy Installation
+
+### Install with composer
+
+To install with [Composer](https://getcomposer.org/), simply require the
+latest version of this package.
 
 ```bash
-$ composer require composer/pcre
+composer require dompdf/dompdf
 ```
 
-
-Requirements
-------------
-
-* PHP 7.4.0 is required for 3.x versions
-* PHP 7.2.0 is required for 2.x versions
-* PHP 5.3.2 is required for 1.x versions
-
-
-Basic usage
------------
-
-Instead of:
+Make sure that the autoload file from Composer is loaded.
 
 ```php
-if (preg_match('{fo+}', $string, $matches)) { ... }
-if (preg_match('{fo+}', $string, $matches, PREG_OFFSET_CAPTURE)) { ... }
-if (preg_match_all('{fo+}', $string, $matches)) { ... }
-$newString = preg_replace('{fo+}', 'bar', $string);
-$newString = preg_replace_callback('{fo+}', function ($match) { return strtoupper($match[0]); }, $string);
-$newString = preg_replace_callback_array(['{fo+}' => fn ($match) => strtoupper($match[0])], $string);
-$filtered = preg_grep('{[a-z]}', $elements);
-$array = preg_split('{[a-z]+}', $string);
+// somewhere early in your project's loading, require the Composer autoloader
+// see: http://getcomposer.org/doc/00-intro.md
+require 'vendor/autoload.php';
 ```
 
-You can now call these on the `Preg` class:
+### Download and install
+
+Download a packaged archive of dompdf and extract it into the 
+directory where dompdf will reside
+
+ * You can download stable copies of dompdf from
+   https://github.com/dompdf/dompdf/releases
+ * Or download a nightly (the latest, unreleased code) from
+   http://eclecticgeek.com/dompdf
+
+Use the packaged release autoloader to load dompdf, libraries,
+and helper functions in your PHP:
 
 ```php
-use Composer\Pcre\Preg;
-
-if (Preg::match('{fo+}', $string, $matches)) { ... }
-if (Preg::matchWithOffsets('{fo+}', $string, $matches)) { ... }
-if (Preg::matchAll('{fo+}', $string, $matches)) { ... }
-$newString = Preg::replace('{fo+}', 'bar', $string);
-$newString = Preg::replaceCallback('{fo+}', function ($match) { return strtoupper($match[0]); }, $string);
-$newString = Preg::replaceCallbackArray(['{fo+}' => fn ($match) => strtoupper($match[0])], $string);
-$filtered = Preg::grep('{[a-z]}', $elements);
-$array = Preg::split('{[a-z]+}', $string);
+// include autoloader
+require_once 'dompdf/autoload.inc.php';
 ```
 
-The main difference is if anything fails to match/replace/.., it will throw a `Composer\Pcre\PcreException`
-instead of returning `null` (or false in some cases), so you can now use the return values safely relying on
-the fact that they can only be strings (for replace), ints (for match) or arrays (for grep/split).
+Note: packaged releases are named according using semantic
+versioning (_dompdf_MAJOR-MINOR-PATCH.zip_). So the 1.0.0 
+release would be dompdf_1-0-0.zip. This is the only download
+that includes the autoloader for Dompdf and all its dependencies.
 
-Additionally the `Preg` class provides match methods that return `bool` rather than `int`, for stricter type safety
-when the number of pattern matches is not useful:
+### Install with git
+
+From the command line, switch to the directory where dompdf will
+reside and run the following commands:
+
+```sh
+git clone https://github.com/dompdf/dompdf.git
+cd dompdf/lib
+
+git clone https://github.com/PhenX/php-font-lib.git php-font-lib
+cd php-font-lib
+git checkout 0.5.1
+cd ..
+
+git clone https://github.com/PhenX/php-svg-lib.git php-svg-lib
+cd php-svg-lib
+git checkout v0.3.2
+cd ..
+
+git clone https://github.com/sabberworm/PHP-CSS-Parser.git php-css-parser
+cd php-css-parser
+git checkout 8.1.0
+```
+
+Require dompdf and it's dependencies in your PHP.
+For details see the [autoloader in the utils project](https://github.com/dompdf/utils/blob/master/autoload.inc.php).
+
+## Framework Integration
+
+* For Symfony: [nucleos/dompdf-bundle](https://github.com/nucleos/NucleosDompdfBundle)
+* For Laravel: [barryvdh/laravel-dompdf](https://github.com/barryvdh/laravel-dompdf)
+* For Redaxo: [PdfOut](https://github.com/FriendsOfREDAXO/pdfout)
+
+## Quick Start
+
+Just pass your HTML in to dompdf and stream the output:
 
 ```php
-use Composer\Pcre\Preg;
+// reference the Dompdf namespace
+use Dompdf\Dompdf;
 
-if (Preg::isMatch('{fo+}', $string, $matches)) // bool
-if (Preg::isMatchAll('{fo+}', $string, $matches)) // bool
+// instantiate and use the dompdf class
+$dompdf = new Dompdf();
+$dompdf->loadHtml('hello world');
+
+// (Optional) Setup the paper size and orientation
+$dompdf->setPaper('A4', 'landscape');
+
+// Render the HTML as PDF
+$dompdf->render();
+
+// Output the generated PDF to Browser
+$dompdf->stream();
 ```
 
-Finally the `Preg` class provides a few `*StrictGroups` method variants that ensure match groups
-are always present and thus non-nullable, making it easier to write type-safe code:
+### Setting Options
+
+Set options during dompdf instantiation:
 
 ```php
-use Composer\Pcre\Preg;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
-// $matches is guaranteed to be an array of strings, if a subpattern does not match and produces a null it will throw
-if (Preg::matchStrictGroups('{fo+}', $string, $matches))
-if (Preg::matchAllStrictGroups('{fo+}', $string, $matches))
+$options = new Options();
+$options->set('defaultFont', 'Courier');
+$dompdf = new Dompdf($options);
 ```
 
-**Note:** This is generally safe to use as long as you do not have optional subpatterns (i.e. `(something)?`
-or `(something)*` or branches with a `|` that result in some groups not being matched at all).
-A subpattern that can match an empty string like `(.*)` is **not** optional, it will be present as an
-empty string in the matches. A non-matching subpattern, even if optional like `(?:foo)?` will anyway not be present in
-matches so it is also not a problem to use these with `*StrictGroups` methods.
-
-If you would prefer a slightly more verbose usage, replacing by-ref arguments by result objects, you can use the `Regex` class:
+or at run time
 
 ```php
-use Composer\Pcre\Regex;
+use Dompdf\Dompdf;
 
-// this is useful when you are just interested in knowing if something matched
-// as it returns a bool instead of int(1/0) for match
-$bool = Regex::isMatch('{fo+}', $string);
-
-$result = Regex::match('{fo+}', $string);
-if ($result->matched) { something($result->matches); }
-
-$result = Regex::matchWithOffsets('{fo+}', $string);
-if ($result->matched) { something($result->matches); }
-
-$result = Regex::matchAll('{fo+}', $string);
-if ($result->matched && $result->count > 3) { something($result->matches); }
-
-$newString = Regex::replace('{fo+}', 'bar', $string)->result;
-$newString = Regex::replaceCallback('{fo+}', function ($match) { return strtoupper($match[0]); }, $string)->result;
-$newString = Regex::replaceCallbackArray(['{fo+}' => fn ($match) => strtoupper($match[0])], $string)->result;
+$dompdf = new Dompdf();
+$options = $dompdf->getOptions();
+$options->setDefaultFont('Courier');
+$dompdf->setOptions($options);
 ```
 
-Note that `preg_grep` and `preg_split` are only callable via the `Preg` class as they do not have
-complex return types warranting a specific result object.
+See [Dompdf\Options](src/Options.php) for a list of available options.
 
-See the [MatchResult](src/MatchResult.php), [MatchWithOffsetsResult](src/MatchWithOffsetsResult.php), [MatchAllResult](src/MatchAllResult.php),
-[MatchAllWithOffsetsResult](src/MatchAllWithOffsetsResult.php), and [ReplaceResult](src/ReplaceResult.php) class sources for more details.
+### Resource Reference Requirements
 
-Restrictions / Limitations
---------------------------
+In order to protect potentially sensitive information Dompdf imposes 
+restrictions on files referenced from the local file system or the web. 
 
-Due to type safety requirements a few restrictions are in place.
+Files accessed through web-based protocols have the following requirements:
+ * The Dompdf option "isRemoteEnabled" must be set to "true"
+ * PHP must either have the curl extension enabled or the 
+   allow_url_fopen setting set to true
+   
+Files accessed through the local file system have the following requirement:
+ * The file must fall within the path(s) specified for the Dompdf "chroot" option
 
-- matching using `PREG_OFFSET_CAPTURE` is made available via `matchWithOffsets` and `matchAllWithOffsets`.
-  You cannot pass the flag to `match`/`matchAll`.
-- `Preg::split` will also reject `PREG_SPLIT_OFFSET_CAPTURE` and you should use `splitWithOffsets`
-  instead.
-- `matchAll` rejects `PREG_SET_ORDER` as it also changes the shape of the returned matches. There
-  is no alternative provided as you can fairly easily code around it.
-- `preg_filter` is not supported as it has a rather crazy API, most likely you should rather
-  use `Preg::grep` in combination with some loop and `Preg::replace`.
-- `replace`, `replaceCallback` and `replaceCallbackArray` do not support an array `$subject`,
-  only simple strings.
-- As of 2.0, the library always uses `PREG_UNMATCHED_AS_NULL` for matching, which offers [much
-  saner/more predictable results](#preg_unmatched_as_null). As of 3.0 the flag is also set for
-  `replaceCallback` and `replaceCallbackArray`.
+## Limitations (Known Issues)
 
-#### PREG_UNMATCHED_AS_NULL
+ * Table cells are not pageable, meaning a table row must fit on a single page: See https://github.com/dompdf/dompdf/issues/98
+ * Elements are rendered on the active page when they are parsed.
+ * Embedding "raw" SVG's (`<svg><path...></svg>`) isn't working yet: See https://github.com/dompdf/dompdf/issues/320  
+   Workaround: Either link to an external SVG file, or use a DataURI like this:
+     ```php
+     $html = '<img src="data:image/svg+xml;base64,' . base64_encode($svg) . '">';
+     ```
+ * Does not support CSS flexbox: See https://github.com/dompdf/dompdf/issues/971
+ * Does not support CSS Grid: See https://github.com/dompdf/dompdf/issues/2988
+ * A single Dompdf instance should not be used to render more than one HTML document
+   because persisted parsing and rendering artifacts can impact future renders.
+---
 
-As of 2.0, this library always uses PREG_UNMATCHED_AS_NULL for all `match*` and `isMatch*`
-functions. As of 3.0 it is also done for `replaceCallback` and `replaceCallbackArray`.
+[![Donate button](https://www.paypal.com/en_US/i/btn/btn_donate_SM.gif)](http://goo.gl/DSvWf)
 
-This means your matches will always contain all matching groups, either as null if unmatched
-or as string if it matched.
-
-The advantages in clarity and predictability are clearer if you compare the two outputs of
-running this with and without PREG_UNMATCHED_AS_NULL in $flags:
-
-```php
-preg_match('/(a)(b)*(c)(d)*/', 'ac', $matches, $flags);
-```
-
-| no flag | PREG_UNMATCHED_AS_NULL |
-| --- | --- |
-| array (size=4)              | array (size=5) |
-| 0 => string 'ac' (length=2) |   0 => string 'ac' (length=2) |
-| 1 => string 'a' (length=1)  |   1 => string 'a' (length=1) |
-| 2 => string '' (length=0)   |   2 => null |
-| 3 => string 'c' (length=1)  |   3 => string 'c' (length=1) |
-|                             |   4 => null |
-| group 2 (any unmatched group preceding one that matched) is set to `''`. You cannot tell if it matched an empty string or did not match at all | group 2 is `null` when unmatched and a string if it matched, easy to check for |
-| group 4 (any optional group without a matching one following) is missing altogether. So you have to check with `isset()`, but really you want `isset($m[4]) && $m[4] !== ''` for safety unless you are very careful to check that a non-optional group follows it | group 4 is always set, and null in this case as there was no match, easy to check for with `$m[4] !== null` |
-
-PHPStan Extension
------------------
-
-To use the PHPStan extension if you do not use `phpstan/extension-installer` you can include `vendor/composer/pcre/extension.neon` in your PHPStan config.
-
-The extension provides much better type information for $matches as well as regex validation where possible.
-
-License
--------
-
-composer/pcre is licensed under the MIT License, see the LICENSE file for details.
+*If you find this project useful, please consider making a donation.
+Any funds donated will be used to help further development on this project.)*
