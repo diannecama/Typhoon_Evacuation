@@ -1,12 +1,53 @@
-# SVG file parsing / rendering library
+# The Parser Model
 
-[![Build Status](https://github.com/dompdf/php-svg-lib/actions/workflows/test.yml/badge.svg)](https://github.com/dompdf/php-svg-lib/actions/workflows/test.yml)
+The parser model here follows the model in section
+[8.2.1](http://www.w3.org/TR/2012/CR-html5-20121217/syntax.html#parsing)
+of the HTML5 specification, though we do not assume a networking layer.
 
-[![Latest Stable Version](https://poser.pugx.org/phenx/php-svg-lib/v/stable)](https://packagist.org/packages/phenx/php-svg-lib) 
-[![Total Downloads](https://poser.pugx.org/phenx/php-svg-lib/downloads)](https://packagist.org/packages/phenx/php-svg-lib) 
-[![Latest Unstable Version](https://poser.pugx.org/phenx/php-svg-lib/v/unstable)](https://packagist.org/packages/phenx/php-svg-lib) 
-[![License](https://poser.pugx.org/phenx/php-svg-lib/license)](https://packagist.org/packages/phenx/php-svg-lib)
+     [ InputStream ]    // Generic support for reading input.
+           ||
+      [ Scanner ]       // Breaks down the stream into characters.
+           ||
+     [ Tokenizer ]      // Groups characters into syntactic
+           ||
+    [ Tree Builder ]    // Organizes units into a tree of objects
+           ||
+     [ DOM Document ]     // The final state of the parsed document.
 
-The main purpose of this lib is to rasterize SVG to a surface which can be an image or a PDF for example, through a `\Svg\Surface` PHP interface.
 
-This project was initialized by the need to render SVG documents inside PDF files for the [DomPdf](https://github.com/dompdf/dompdf) project.
+## InputStream
+
+This is an interface with at least two concrete implementations:
+
+- StringInputStream: Reads an HTML5 string.
+- FileInputStream: Reads an HTML5 file.
+
+## Scanner
+
+This is a mechanical piece of the parser.
+
+## Tokenizer
+
+This follows section 8.4 of the HTML5 spec. It is (roughly) a recursive
+descent parser. (Though there are plenty of optimizations that are less
+than purely functional.
+
+## EventHandler and DOMTree
+
+EventHandler is the interface for tree builders. Since not all
+implementations will necessarily build trees, we've chosen a more
+generic name.
+
+The event handler emits tokens during tokenization.
+
+The DOMTree is an event handler that builds a DOM tree. The output of
+the DOMTree builder is a DOMDocument.
+
+## DOMDocument
+
+PHP has a DOMDocument class built-in (technically, it's part of libxml.)
+We use that, thus rendering the output of this process compatible with
+SimpleXML, QueryPath, and many other XML/HTML processing tools.
+
+For cases where the HTML5 is a fragment of a HTML5 document a
+DOMDocumentFragment is returned instead. This is another built-in class.
