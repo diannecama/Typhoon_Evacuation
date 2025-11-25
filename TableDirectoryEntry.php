@@ -5,13 +5,29 @@
  * @license http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
  */
 
-namespace FontLib\OpenType;
+namespace FontLib\WOFF;
+
+use FontLib\Table\DirectoryEntry;
 
 /**
- * Open Type Table directory entry, the same as a TrueType one.
+ * WOFF font file table directory entry.
  *
  * @package php-font-lib
  */
-class TableDirectoryEntry extends \FontLib\TrueType\TableDirectoryEntry {
+class TableDirectoryEntry extends DirectoryEntry {
+  public $origLength;
 
+  function __construct(File $font) {
+    parent::__construct($font);
+  }
+
+  function parse() {
+    parent::parse();
+
+    $font             = $this->font;
+    $this->offset     = $font->readUInt32();
+    $this->length     = $font->readUInt32();
+    $this->origLength = $font->readUInt32();
+    $this->checksum   = $font->readUInt32();
+  }
 }
