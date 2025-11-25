@@ -1,270 +1,406 @@
-> # UKRAINE NEEDS YOUR HELP NOW!
->
-> On 24 February 2022, Russian [President Vladimir Putin ordered an invasion of Ukraine by Russian Armed Forces](https://www.bbc.com/news/world-europe-60504334).
->
-> Your support is urgently needed.
->
-> - Donate to the volunteers. Here is the volunteer fund helping the Ukrainian army to provide all the necessary equipment:
->  https://bank.gov.ua/en/news/all/natsionalniy-bank-vidkriv-spetsrahunok-dlya-zboru-koshtiv-na-potrebi-armiyi or https://savelife.in.ua/en/donate/
-> - Triple-check social media sources. Russian disinformation is attempting to coverup and distort the reality in Ukraine.
-> - Help Ukrainian refugees who are fleeing Russian attacks and shellings: https://www.globalcitizen.org/en/content/ways-to-help-ukraine-conflict/
-> -  Put pressure on your political representatives to provide help to Ukraine.
-> -  Believe in the Ukrainian people, they will not surrender, they don't have another Ukraine.
->
-> THANK YOU!
-----
+# DeepCopy
 
-# HTML5-PHP
+DeepCopy helps you create deep copies (clones) of your objects. It is designed to handle cycles in the association graph.
 
-HTML5 is a standards-compliant HTML5 parser and writer written entirely in PHP.
-It is stable and used in many production websites, and has
-well over [five million downloads](https://packagist.org/packages/masterminds/html5).
+[![Total Downloads](https://poser.pugx.org/myclabs/deep-copy/downloads.svg)](https://packagist.org/packages/myclabs/deep-copy)
+[![Integrate](https://github.com/myclabs/DeepCopy/actions/workflows/ci.yaml/badge.svg?branch=1.x)](https://github.com/myclabs/DeepCopy/actions/workflows/ci.yaml)
 
-HTML5 provides the following features.
+## Table of Contents
 
-- An HTML5 serializer
-- Support for PHP namespaces
-- Composer support
-- Event-based (SAX-like) parser
-- A DOM tree builder
-- Interoperability with [QueryPath](https://github.com/technosophos/querypath)
-- Runs on **PHP** 5.3.0 or newer
+1. [How](#how)
+1. [Why](#why)
+    1. [Using simply `clone`](#using-simply-clone)
+    1. [Overriding `__clone()`](#overriding-__clone)
+    1. [With `DeepCopy`](#with-deepcopy)
+1. [How it works](#how-it-works)
+1. [Going further](#going-further)
+    1. [Matchers](#matchers)
+        1. [Property name](#property-name)
+        1. [Specific property](#specific-property)
+        1. [Type](#type)
+    1. [Filters](#filters)
+        1. [`SetNullFilter`](#setnullfilter-filter)
+        1. [`KeepFilter`](#keepfilter-filter)
+        1. [`DoctrineCollectionFilter`](#doctrinecollectionfilter-filter)
+        1. [`DoctrineEmptyCollectionFilter`](#doctrineemptycollectionfilter-filter)
+        1. [`DoctrineProxyFilter`](#doctrineproxyfilter-filter)
+        1. [`ReplaceFilter`](#replacefilter-type-filter)
+        1. [`ShallowCopyFilter`](#shallowcopyfilter-type-filter)
+1. [Edge cases](#edge-cases)
+1. [Contributing](#contributing)
+    1. [Tests](#tests)
 
-[![CI](https://github.com/Masterminds/html5-php/actions/workflows/ci.yaml/badge.svg)](https://github.com/Masterminds/html5-php/actions/workflows/ci.yaml)
-[![Latest Stable Version](https://poser.pugx.org/masterminds/html5/v/stable.png)](https://packagist.org/packages/masterminds/html5)
-[![Code Coverage](https://scrutinizer-ci.com/g/Masterminds/html5-php/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/Masterminds/html5-php/?branch=master)
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Masterminds/html5-php/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/Masterminds/html5-php/?branch=master)
-[![Stability: Sustained](https://masterminds.github.io/stability/sustained.svg)](https://masterminds.github.io/stability/sustained.html)
 
-## Installation
+## How?
 
-Install HTML5-PHP using [composer](http://getcomposer.org/).
+Install with Composer:
 
-By adding the `masterminds/html5` dependency to your `composer.json` file:
+```
+composer require myclabs/deep-copy
+```
 
-```json
+Use it:
+
+```php
+use DeepCopy\DeepCopy;
+
+$copier = new DeepCopy();
+$myCopy = $copier->copy($myObject);
+```
+
+
+## Why?
+
+- How do you create copies of your objects?
+
+```php
+$myCopy = clone $myObject;
+```
+
+- How do you create **deep** copies of your objects (i.e. copying also all the objects referenced in the properties)?
+
+You use [`__clone()`](http://www.php.net/manual/en/language.oop5.cloning.php#object.clone) and implement the behavior
+yourself.
+
+- But how do you handle **cycles** in the association graph?
+
+Now you're in for a big mess :(
+
+![association graph](doc/graph.png)
+
+
+### Using simply `clone`
+
+![Using clone](doc/clone.png)
+
+
+### Overriding `__clone()`
+
+![Overriding __clone](doc/deep-clone.png)
+
+
+### With `DeepCopy`
+
+![With DeepCopy](doc/deep-copy.png)
+
+
+## How it works
+
+DeepCopy recursively traverses all the object's properties and clones them. To avoid cloning the same object twice it
+keeps a hash map of all instances and thus preserves the object graph.
+
+To use it:
+
+```php
+use function DeepCopy\deep_copy;
+
+$copy = deep_copy($var);
+```
+
+Alternatively, you can create your own `DeepCopy` instance to configure it differently for example:
+
+```php
+use DeepCopy\DeepCopy;
+
+$copier = new DeepCopy(true);
+
+$copy = $copier->copy($var);
+```
+
+You may want to roll your own deep copy function:
+
+```php
+namespace Acme;
+
+use DeepCopy\DeepCopy;
+
+function deep_copy($var)
 {
-  "require" : {
-    "masterminds/html5": "^2.0"
-  },
+    static $copier = null;
+    
+    if (null === $copier) {
+        $copier = new DeepCopy(true);
+    }
+    
+    return $copier->copy($var);
 }
 ```
 
-By invoking require command via composer executable:
 
-```bash
-composer require masterminds/html5
-```
+## Going further
 
-## Basic Usage
+You can add filters to customize the copy process.
 
-HTML5-PHP has a high-level API and a low-level API.
+The method to add a filter is `DeepCopy\DeepCopy::addFilter($filter, $matcher)`,
+with `$filter` implementing `DeepCopy\Filter\Filter`
+and `$matcher` implementing `DeepCopy\Matcher\Matcher`.
 
-Here is how you use the high-level `HTML5` library API:
+We provide some generic filters and matchers.
 
-```php
-<?php
-// Assuming you installed from Composer:
-require "vendor/autoload.php";
 
-use Masterminds\HTML5;
+### Matchers
 
-// An example HTML document:
-$html = <<< 'HERE'
-  <html>
-  <head>
-    <title>TEST</title>
-  </head>
-  <body id='foo'>
-    <h1>Hello World</h1>
-    <p>This is a test of the HTML5 parser.</p>
-  </body>
-  </html>
-HERE;
+  - `DeepCopy\Matcher` applies on a object attribute.
+  - `DeepCopy\TypeMatcher` applies on any element found in graph, including array elements.
 
-// Parse the document. $dom is a DOMDocument.
-$html5 = new HTML5();
-$dom = $html5->loadHTML($html);
 
-// Render it as HTML5:
-print $html5->saveHTML($dom);
+#### Property name
 
-// Or save it to a file:
-$html5->save($dom, 'out.html');
-```
-
-The `$dom` created by the parser is a full `DOMDocument` object. And the
-`save()` and `saveHTML()` methods will take any DOMDocument.
-
-### Options
-
-It is possible to pass in an array of configuration options when loading
-an HTML5 document.
+The `PropertyNameMatcher` will match a property by its name:
 
 ```php
-// An associative array of options
-$options = array(
-  'option_name' => 'option_value',
+use DeepCopy\Matcher\PropertyNameMatcher;
+
+// Will apply a filter to any property of any objects named "id"
+$matcher = new PropertyNameMatcher('id');
+```
+
+
+#### Specific property
+
+The `PropertyMatcher` will match a specific property of a specific class:
+
+```php
+use DeepCopy\Matcher\PropertyMatcher;
+
+// Will apply a filter to the property "id" of any objects of the class "MyClass"
+$matcher = new PropertyMatcher('MyClass', 'id');
+```
+
+
+#### Type
+
+The `TypeMatcher` will match any element by its type (instance of a class or any value that could be parameter of
+[gettype()](http://php.net/manual/en/function.gettype.php) function):
+
+```php
+use DeepCopy\TypeMatcher\TypeMatcher;
+
+// Will apply a filter to any object that is an instance of Doctrine\Common\Collections\Collection
+$matcher = new TypeMatcher('Doctrine\Common\Collections\Collection');
+```
+
+
+### Filters
+
+- `DeepCopy\Filter` applies a transformation to the object attribute matched by `DeepCopy\Matcher`
+- `DeepCopy\TypeFilter` applies a transformation to any element matched by `DeepCopy\TypeMatcher`
+
+By design, matching a filter will stop the chain of filters (i.e. the next ones will not be applied).
+Using the ([`ChainableFilter`](#chainablefilter-filter)) won't stop the chain of filters.
+
+
+#### `SetNullFilter` (filter)
+
+Let's say for example that you are copying a database record (or a Doctrine entity), so you want the copy not to have
+any ID:
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\Filter\SetNullFilter;
+use DeepCopy\Matcher\PropertyNameMatcher;
+
+$object = MyClass::load(123);
+echo $object->id; // 123
+
+$copier = new DeepCopy();
+$copier->addFilter(new SetNullFilter(), new PropertyNameMatcher('id'));
+
+$copy = $copier->copy($object);
+
+echo $copy->id; // null
+```
+
+
+#### `KeepFilter` (filter)
+
+If you want a property to remain untouched (for example, an association to an object):
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\Filter\KeepFilter;
+use DeepCopy\Matcher\PropertyMatcher;
+
+$copier = new DeepCopy();
+$copier->addFilter(new KeepFilter(), new PropertyMatcher('MyClass', 'category'));
+
+$copy = $copier->copy($object);
+// $copy->category has not been touched
+```
+
+
+#### `ChainableFilter` (filter)
+
+If you use cloning on proxy classes, you might want to apply two filters for:
+1. loading the data
+2. applying a transformation
+
+You can use the `ChainableFilter` as a decorator of the proxy loader filter, which won't stop the chain of filters (i.e. 
+the next ones may be applied).
+
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\Filter\ChainableFilter;
+use DeepCopy\Filter\Doctrine\DoctrineProxyFilter;
+use DeepCopy\Filter\SetNullFilter;
+use DeepCopy\Matcher\Doctrine\DoctrineProxyMatcher;
+use DeepCopy\Matcher\PropertyNameMatcher;
+
+$copier = new DeepCopy();
+$copier->addFilter(new ChainableFilter(new DoctrineProxyFilter()), new DoctrineProxyMatcher());
+$copier->addFilter(new SetNullFilter(), new PropertyNameMatcher('id'));
+
+$copy = $copier->copy($object);
+
+echo $copy->id; // null
+```
+
+
+#### `DoctrineCollectionFilter` (filter)
+
+If you use Doctrine and want to copy an entity, you will need to use the `DoctrineCollectionFilter`:
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\Filter\Doctrine\DoctrineCollectionFilter;
+use DeepCopy\Matcher\PropertyTypeMatcher;
+
+$copier = new DeepCopy();
+$copier->addFilter(new DoctrineCollectionFilter(), new PropertyTypeMatcher('Doctrine\Common\Collections\Collection'));
+
+$copy = $copier->copy($object);
+```
+
+
+#### `DoctrineEmptyCollectionFilter` (filter)
+
+If you use Doctrine and want to copy an entity who contains a `Collection` that you want to be reset, you can use the
+`DoctrineEmptyCollectionFilter`
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\Filter\Doctrine\DoctrineEmptyCollectionFilter;
+use DeepCopy\Matcher\PropertyMatcher;
+
+$copier = new DeepCopy();
+$copier->addFilter(new DoctrineEmptyCollectionFilter(), new PropertyMatcher('MyClass', 'myProperty'));
+
+$copy = $copier->copy($object);
+
+// $copy->myProperty will return an empty collection
+```
+
+
+#### `DoctrineProxyFilter` (filter)
+
+If you use Doctrine and use cloning on lazy loaded entities, you might encounter errors mentioning missing fields on a
+Doctrine proxy class (...\\\_\_CG\_\_\Proxy).
+You can use the `DoctrineProxyFilter` to load the actual entity behind the Doctrine proxy class.
+**Make sure, though, to put this as one of your very first filters in the filter chain so that the entity is loaded
+before other filters are applied!**
+We recommend to decorate the `DoctrineProxyFilter` with the `ChainableFilter` to allow applying other filters to the
+cloned lazy loaded entities.
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\Filter\Doctrine\DoctrineProxyFilter;
+use DeepCopy\Matcher\Doctrine\DoctrineProxyMatcher;
+
+$copier = new DeepCopy();
+$copier->addFilter(new ChainableFilter(new DoctrineProxyFilter()), new DoctrineProxyMatcher());
+
+$copy = $copier->copy($object);
+
+// $copy should now contain a clone of all entities, including those that were not yet fully loaded.
+```
+
+
+#### `ReplaceFilter` (type filter)
+
+1. If you want to replace the value of a property:
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\Filter\ReplaceFilter;
+use DeepCopy\Matcher\PropertyMatcher;
+
+$copier = new DeepCopy();
+$callback = function ($currentValue) {
+  return $currentValue . ' (copy)'
+};
+$copier->addFilter(new ReplaceFilter($callback), new PropertyMatcher('MyClass', 'title'));
+
+$copy = $copier->copy($object);
+
+// $copy->title will contain the data returned by the callback, e.g. 'The title (copy)'
+```
+
+2. If you want to replace whole element:
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\TypeFilter\ReplaceFilter;
+use DeepCopy\TypeMatcher\TypeMatcher;
+
+$copier = new DeepCopy();
+$callback = function (MyClass $myClass) {
+  return get_class($myClass);
+};
+$copier->addTypeFilter(new ReplaceFilter($callback), new TypeMatcher('MyClass'));
+
+$copy = $copier->copy([new MyClass, 'some string', new MyClass]);
+
+// $copy will contain ['MyClass', 'some string', 'MyClass']
+```
+
+
+The `$callback` parameter of the `ReplaceFilter` constructor accepts any PHP callable.
+
+
+#### `ShallowCopyFilter` (type filter)
+
+Stop *DeepCopy* from recursively copying element, using standard `clone` instead:
+
+```php
+use DeepCopy\DeepCopy;
+use DeepCopy\TypeFilter\ShallowCopyFilter;
+use DeepCopy\TypeMatcher\TypeMatcher;
+use Mockery as m;
+
+$this->deepCopy = new DeepCopy();
+$this->deepCopy->addTypeFilter(
+	new ShallowCopyFilter,
+	new TypeMatcher(m\MockInterface::class)
 );
 
-// Provide the options to the constructor
-$html5 = new HTML5($options);
-
-$dom = $html5->loadHTML($html);
+$myServiceWithMocks = new MyService(m::mock(MyDependency1::class), m::mock(MyDependency2::class));
+// All mocks will be just cloned, not deep copied
 ```
 
-The following options are supported:
 
-* `encode_entities` (boolean): Indicates that the serializer should aggressively
-  encode characters as entities. Without this, it only encodes the bare
-  minimum.
-* `disable_html_ns` (boolean): Prevents the parser from automatically
-  assigning the HTML5 namespace to the DOM document. This is for
-  non-namespace aware DOM tools.
-* `target_document` (\DOMDocument): A DOM document that will be used as the
-  destination for the parsed nodes.
-* `implicit_namespaces` (array): An assoc array of namespaces that should be
-  used by the parser. Name is tag prefix, value is NS URI.
+## Edge cases
 
-## The Low-Level API
+The following structures cannot be deep-copied with PHP Reflection. As a result they are shallow cloned and filters are
+not applied. There is two ways for you to handle them:
 
-This library provides the following low-level APIs that you can use to
-create more customized HTML5 tools:
+- Implement your own `__clone()` method
+- Use a filter with a type matcher
 
-- A SAX-like event-based parser that you can hook into for special kinds
-of parsing.
-- A flexible error-reporting mechanism that can be tuned to document
-syntax checking.
-- A DOM implementation that uses PHP's built-in DOM library.
 
-The unit tests exercise each piece of the API, and every public function
-is well-documented.
+## Contributing
 
-### Parser Design
+DeepCopy is distributed under the MIT license.
 
-The parser is designed as follows:
 
-- The `Scanner` handles scanning on behalf of the parser.
-- The `Tokenizer` requests data off of the scanner, parses it, clasifies
-it, and sends it to an `EventHandler`. It is a *recursive descent parser.*
-- The `EventHandler` receives notifications and data for each specific
-semantic event that occurs during tokenization.
-- The `DOMBuilder` is an `EventHandler` that listens for tokenizing
-events and builds a document tree (`DOMDocument`) based on the events.
+### Tests
 
-### Serializer Design
-
-The serializer takes a data structure (the `DOMDocument`) and transforms
-it into a character representation -- an HTML5 document.
-
-The serializer is broken into three parts:
-
-- The `OutputRules` contain the rules to turn DOM elements into strings. The
-rules are an implementation of the interface `RulesInterface` allowing for
-different rule sets to be used.
-- The `Traverser`, which is a special-purpose tree walker. It visits
-each node node in the tree and uses the `OutputRules` to transform the node
-into a string.
-- `HTML5` manages the `Traverser` and stores the resultant data
-in the correct place.
-
-The serializer (`save()`, `saveHTML()`) follows the
-[section 8.9 of the HTML 5.0 spec](http://www.w3.org/TR/2012/CR-html5-20121217/syntax.html#serializing-html-fragments).
-So tags are serialized according to these rules:
-
-- A tag with children: &lt;foo&gt;CHILDREN&lt;/foo&gt;
-- A tag that cannot have content: &lt;foo&gt; (no closing tag)
-- A tag that could have content, but doesn't: &lt;foo&gt;&lt;/foo&gt;
-
-## Known Issues (Or, Things We Designed Against the Spec)
-
-Please check the issue queue for a full list, but the following are
-issues known issues that are not presently on the roadmap:
-
-- Namespaces: HTML5 only [supports a selected list of namespaces](http://www.w3.org/TR/html5/infrastructure.html#namespaces)
-  and they do not operate in the same way as XML namespaces. A `:` has no special
-  meaning.
-  By default the parser does not support XML style namespaces via `:`;
-  to enable the XML namespaces see the  [XML Namespaces section](#xml-namespaces)
-- Scripts: This parser does not contain a JavaScript or a CSS
-  interpreter. While one may be supplied, not all features will be
-  supported.
-- Reentrance: The current parser is not re-entrant. (Thus you can't pause
-  the parser to modify the HTML string mid-parse.)
-- Validation: The current tree builder is **not** a validating parser.
-  While it will correct some HTML, it does not check that the HTML
-  conforms to the standard. (Should you wish, you can build a validating
-  parser by extending DOMTree or building your own EventHandler
-  implementation.)
-  * There is limited support for insertion modes.
-  * Some autocorrection is done automatically.
-  * Per the spec, many legacy tags are admitted and correctly handled,
-    even though they are technically not part of HTML5.
-- Attribute names and values: Due to the implementation details of the
-  PHP implementation of DOM, attribute names that do not follow the
-  XML 1.0 standard are not inserted into the DOM. (Effectively, they
-  are ignored.) If you've got a clever fix for this, jump in!
-- Processor Instructions: The HTML5 spec does not allow processor
-  instructions. We do. Since this is a server-side library, we think
-  this is useful. And that means, dear reader, that in some cases you
-  can parse the HTML from a mixed PHP/HTML document. This, however,
-  is an incidental feature, not a core feature.
-- HTML manifests: Unsupported.
-- PLAINTEXT: Unsupported.
-- Adoption Agency Algorithm: Not yet implemented. (8.2.5.4.7)
-
-## XML Namespaces
-
-To use XML style namespaces you have to configure well the main `HTML5` instance.
+Running the tests is simple:
 
 ```php
-use Masterminds\HTML5;
-$html = new HTML5(array(
-    "xmlNamespaces" => true
-));
-
-$dom = $html->loadHTML('<t:tag xmlns:t="http://www.example.com"/>');
-
-$dom->documentElement->namespaceURI; // http://www.example.com
-
+vendor/bin/phpunit
 ```
 
-You can also add some default prefixes that will not require the namespace declaration,
-but its elements will be namespaced.
+### Support
 
-```php
-use Masterminds\HTML5;
-$html = new HTML5(array(
-    "implicitNamespaces"=>array(
-        "t"=>"http://www.example.com"
-    )
-));
-
-$dom = $html->loadHTML('<t:tag/>');
-
-$dom->documentElement->namespaceURI; // http://www.example.com
-
-```
-
-## Thanks to...
-
-The dedicated (and patient) contributors of patches small and large,
-who have already made this library better.See the CREDITS file for
-a list of contributors.
-
-We owe a huge debt of gratitude to the original authors of html5lib.
-
-While not much of the original parser remains, we learned a lot from
-reading the html5lib library. And some pieces remain here. In
-particular, much of the UTF-8 and Unicode handling is derived from the
-html5lib project.
-
-## License
-
-This software is released under the MIT license. The original html5lib
-library was also released under the MIT license.
-
-See LICENSE.txt
-
-Certain files contain copyright assertions by specific individuals
-involved with html5lib. Those have been retained where appropriate.
+Get professional support via [the Tidelift Subscription](https://tidelift.com/subscription/pkg/packagist-myclabs-deep-copy?utm_source=packagist-myclabs-deep-copy&utm_medium=referral&utm_campaign=readme).
