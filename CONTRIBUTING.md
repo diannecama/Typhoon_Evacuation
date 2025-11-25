@@ -1,139 +1,53 @@
-# Contributing to ZipStream-PHP
+Contributing
+============
 
-## Welcome!
+Issue tracker
+-------------
 
-We look forward to your contributions! Here are some examples how you can
-contribute:
+The Issue tracker serves mainly as a place to report bugs and request new features.
+Please do not abuse it as a general questions or troubleshooting location.
 
-- [Report a bug](https://github.com/maennchen/ZipStream-PHP/issues/new?labels=bug&template=BUG.md)
-- [Propose a new feature](https://github.com/maennchen/ZipStream-PHP/issues/new?labels=enhancement&template=FEATURE.md)
-- [Send a pull request](https://github.com/maennchen/ZipStream-PHP/pulls)
+General troubleshooting
+-------------
 
-## We have a Code of Conduct
+For these questions please use [Discussions](https://github.com/mpdf/mpdf/discussions). Add your enquiry
+to appropriate category and as always, include a reproducible code example when applicable (see code example guidelines below).
 
-Please note that this project is released with a
-[Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in this
-project you agree to abide by its terms.
+You can also use the [mpdf tag](https://stackoverflow.com/questions/tagged/mpdf)
+at [Stack Overflow](https://stackoverflow.com/)
+as the StackOverflow user base is more likely to answer you in a timely manner.
+When doing so, make sure you comply to StackOverflow question guidelines.
 
-## Any contributions you make will be under the MIT License
+Bug reports
+-------------
 
-When you submit code changes, your submissions are understood to be under the
-same [MIT License](https://github.com/maennchen/ZipStream-PHP/blob/main/LICENSE)
-that covers the project. By contributing to this project, you agree that your
-contributions will be licensed under its MIT License.
+* Bug reports **MUST** contain a small example in php/html that reproduces the bug.
+* The code example **MUST** be reproducible by copy&paste assuming composer dependencies are installed. That means:
+    * No calling unrelated funcions,
+    * an actual final HTML code has to be present, pasting a template file is not enough,
+    * if the bug considers import or fonts, example source PDF/TTF/etc files have to be included.
+* Failing to provide necessary information or not using the issue template will cause the issue to be closed until required information is provided.
+* Please report one feature or one bug per issue.
 
-## Write bug reports with detail, background, and sample code
+Feature requests
+-------------
 
-In your bug report, please provide the following:
+Feature requests have to be labeled as such and have to include reasoning for the change in question.
 
-- A quick summary and/or background
-- Steps to reproduce
-  - Be specific!
-  - Give sample code if you can.
-- What you expected would happen
-- What actually happens
-- Notes (possibly including why you think this might be happening, or stuff you
-- tried that didn't work)
 
-Please do not report a bug for a version of ZIPStream-PHP that is no longer
-supported (`< 3.0.0`). Please do not report a bug if you are using a version of
-PHP that is not supported by the version of ZipStream-PHP you are using.
+Pull requests
+-------------
 
-Please post code and output as text
-([using proper markup](https://guides.github.com/features/mastering-markdown/)).
-Do not post screenshots of code or output.
+Pull requests should be always based on the default [development](https://github.com/mpdf/mpdf/tree/development)
+branch except for backports to older versions.
 
-Please include the output of `composer info | sort`.
+Guidelines:
 
-## Workflow for Pull Requests
+* Use an aptly named feature branch for the Pull request.
+* Only files and lines affecting the scope of the Pull request must be affected.
+* Make small, *atomic* commits that keep the smallest possible related code changes together.
+* Code must be accompanied by a unit test testing expected behaviour whenever possible.
+* To be incorporated, the PR should contain a change in the CHANGELOG.md file describing itself
 
-1. Fork the repository.
-2. Create your branch from `main` if you plan to implement new functionality or
-   change existing code significantly; create your branch from the oldest branch
-   that is affected by the bug if you plan to fix a bug.
-3. Implement your change and add tests for it.
-4. Ensure the test suite passes.
-5. Ensure the code complies with our coding guidelines (see below).
-6. Send that pull request!
-
-Please make sure you have
-[set up your user name and email address](https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup)
-for use with Git. Strings such as `silly nick name <root@localhost>` look really
-stupid in the commit history of a project.
-
-We encourage you to
-[sign your Git commits with your GPG key](https://docs.github.com/en/github/authenticating-to-github/signing-commits).
-
-Pull requests for new features must be based on the `main` branch.
-
-We are trying to keep backwards compatibility breaks in ZipStream-PHP to a
-minimum. Please take this into account when proposing changes.
-
-Due to time constraints, we are not always able to respond as quickly as we
-would like. Please do not take delays personal and feel free to remind us if you
-feel that we forgot to respond.
-
-## Coding Guidelines
-
-This project comes with a configuration file (located at `/psalm.yml` in the
-repository) that you can use to perform static analysis (with a focus on type
-checking):
-
-```bash
-$ .composer run test:lint
-```
-
-This project comes with a configuration file (located at
-`/.php-cs-fixer.dist.php` in the repository) that you can use to (re)format your
-source code for compliance with this project's coding guidelines:
-
-```bash
-$ composer run format
-```
-
-Please understand that we will not accept a pull request when its changes
-violate this project's coding guidelines.
-
-## Using ZipStream-PHP from a Git checkout
-
-The following commands can be used to perform the initial checkout of
-ZipStream-PHP:
-
-```bash
-$ git clone git@github.com:maennchen/ZipStream-PHP.git
-
-$ cd ZipStream-PHP
-```
-
-Install ZipStream-PHP's dependencies using [Composer](https://getcomposer.org/):
-
-```bash
-$ composer install
-$ composer run install:tools # Install phpDocumentor using phive
-```
-
-## Running ZipStream-PHP's test suite
-
-After following the steps shown above, ZipStream-PHP's test suite is run like
-this:
-
-```bash
-$ composer run test:unit
-```
-
-There's some slow tests in the test suite that test the handling of big files in
-the archives. To skip them use the following command instead:
-
-```bash
-$ composer run test:unit:fast
-```
-
-## Generating ZipStream-PHP Documentation
-
-To generate the documentation for the library, run:
-
-```bash
-$ composer run docs:generate
-```
-
-The guide documentation pages can be found in the `/guides/` directory.
+When updating a PR, do not create a new one, just `git push --force` to your former feature branch, the PR will
+update itself.

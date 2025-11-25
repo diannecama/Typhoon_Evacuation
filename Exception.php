@@ -1,13 +1,10 @@
 <?php
 
-/**
- * Exception.
- *
- * @copyright  Copyright (c) 2013-2018 Mark Baker (https://github.com/MarkBaker/PHPMatrix)
- * @license    https://opensource.org/licenses/MIT    MIT
- */
-namespace Matrix;
+namespace Masterminds\HTML5;
 
+/**
+ * The base exception for the HTML5 project.
+ */
 class Exception extends \Exception
 {
 }
