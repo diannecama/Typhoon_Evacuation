@@ -1,121 +1,30 @@
-<?php
+<?php declare(strict_types=1);
 
-declare(strict_types=1);
+namespace PhpParser\Node\Expr;
 
-/*
- * This file is part of Result Type.
- *
- * (c) Graham Campbell <hello@gjcampbell.co.uk>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
-namespace GrahamCampbell\ResultType;
-
-use PhpOption\None;
-use PhpOption\Some;
+use PhpParser\Node\Expr;
 
 /**
- * @template T
- * @template E
+ * Error node used during parsing with error recovery.
  *
- * @extends \GrahamCampbell\ResultType\Result<T,E>
+ * An error node may be placed at a position where an expression is required, but an error occurred.
+ * Error nodes will not be present if the parser is run in throwOnError mode (the default).
  */
-final class Error extends Result
-{
+class Error extends Expr {
     /**
-     * @var E
-     */
-    private $value;
-
-    /**
-     * Internal constructor for an error value.
+     * Constructs an error node.
      *
-     * @param E $value
-     *
-     * @return void
+     * @param array<string, mixed> $attributes Additional attributes
      */
-    private function __construct($value)
-    {
-        $this->value = $value;
+    public function __construct(array $attributes = []) {
+        $this->attributes = $attributes;
     }
 
-    /**
-     * Create a new error value.
-     *
-     * @template F
-     *
-     * @param F $value
-     *
-     * @return \GrahamCampbell\ResultType\Result<T,F>
-     */
-    public static function create($value)
-    {
-        return new self($value);
+    public function getSubNodeNames(): array {
+        return [];
     }
 
-    /**
-     * Get the success option value.
-     *
-     * @return \PhpOption\Option<T>
-     */
-    public function success()
-    {
-        return None::create();
-    }
-
-    /**
-     * Map over the success value.
-     *
-     * @template S
-     *
-     * @param callable(T):S $f
-     *
-     * @return \GrahamCampbell\ResultType\Result<S,E>
-     */
-    public function map(callable $f)
-    {
-        return self::create($this->value);
-    }
-
-    /**
-     * Flat map over the success value.
-     *
-     * @template S
-     * @template F
-     *
-     * @param callable(T):\GrahamCampbell\ResultType\Result<S,F> $f
-     *
-     * @return \GrahamCampbell\ResultType\Result<S,F>
-     */
-    public function flatMap(callable $f)
-    {
-        /** @var \GrahamCampbell\ResultType\Result<S,F> */
-        return self::create($this->value);
-    }
-
-    /**
-     * Get the error option value.
-     *
-     * @return \PhpOption\Option<E>
-     */
-    public function error()
-    {
-        return Some::create($this->value);
-    }
-
-    /**
-     * Map over the error value.
-     *
-     * @template F
-     *
-     * @param callable(E):F $f
-     *
-     * @return \GrahamCampbell\ResultType\Result<T,F>
-     */
-    public function mapError(callable $f)
-    {
-        return self::create($f($this->value));
+    public function getType(): string {
+        return 'Expr_Error';
     }
 }
