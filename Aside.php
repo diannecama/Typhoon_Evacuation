@@ -2,7 +2,7 @@
 
 namespace Mpdf\Tag;
 
-class Time extends InlineTag
+class Aside extends BlockTag
 {
 
 
