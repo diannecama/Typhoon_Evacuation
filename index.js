@@ -1,7 +1,7 @@
-// Exports the "link" plugin for usage with module loaders
+// Exports the "wordcount" plugin for usage with module loaders
 // Usage:
 //   CommonJS:
-//     require('tinymce/plugins/link')
+//     require('tinymce/plugins/wordcount')
 //   ES2015:
-//     import 'tinymce/plugins/link'
+//     import 'tinymce/plugins/wordcount'
 require('./plugin.js');
